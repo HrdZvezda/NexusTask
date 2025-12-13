@@ -1,0 +1,69 @@
+#!/bin/bash
+# ============================================
+# 開發環境啟動腳本
+# ============================================
+# 使用方式：.start/dev
+# 這會同時啟動前端和後端伺服器
+
+# 取得腳本所在目錄的父目錄（專案根目錄）
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+# 檢查並釋放埠號的輔助函式
+kill_port_if_busy() {
+  PORT=$1
+  # 取得綁定該埠的所有 PID
+  PIDS=$(lsof -ti tcp:$PORT 2>/dev/null)
+  if [ -n "$PIDS" ]; then
+    echo "⚠️  Port $PORT 已被占用，正在終止舊程序 ($PIDS)..."
+    kill -9 $PIDS 2>/dev/null
+    sleep 1
+  fi
+}
+
+echo "🚀 啟動 NexusTeam 開發環境..."
+echo "📁 專案目錄: $PROJECT_DIR"
+echo ""
+
+# 確保常用埠號沒有舊程序
+kill_port_if_busy 8888   # Flask
+kill_port_if_busy 5173   # Vite 預設埠
+
+# 啟動後端
+echo "🔧 啟動後端伺服器 (Flask)..."
+cd "$PROJECT_DIR/backend"
+
+# 啟動虛擬環境並執行 Flask
+source venv/bin/activate
+python app.py &
+BACKEND_PID=$!
+echo "✅ 後端已啟動 (PID: $BACKEND_PID) - http://localhost:8888"
+
+# 等待後端啟動
+sleep 2
+
+# 啟動前端
+echo ""
+echo "🎨 啟動前端伺服器 (Vite)..."
+cd "$PROJECT_DIR/frontend"
+npm run dev &
+FRONTEND_PID=$!
+echo "✅ 前端已啟動 (PID: $FRONTEND_PID) - http://localhost:5173"
+
+echo ""
+echo "================================================"
+echo "🎉 開發環境已啟動！"
+echo ""
+echo "📍 前端: http://localhost:5173"
+echo "📍 後端: http://localhost:8888"
+echo "📍 健康檢查: http://localhost:8888/health"
+echo ""
+echo "按 Ctrl+C 停止所有服務"
+echo "================================================"
+
+# 等待中斷信號
+trap "echo ''; echo '🛑 正在停止服務...'; kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit 0" SIGINT SIGTERM
+
+# 保持腳本運行
+wait
+
