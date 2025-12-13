@@ -103,7 +103,8 @@ team-task-manager/
     │   └── apiService.ts     # 所有 API 呼叫
     │
     ├── context/               # React Context
-    │   └── AuthContext.tsx   # 認證狀態
+    │   ├── AuthContext.tsx   # 認證狀態
+    │   └── NotificationContext.tsx # 通知狀態同步（Dashboard ↔ Notifications）
     │
     └── hooks/                 # 自訂 Hooks
         ├── useApi.ts         # API 相關 hooks
@@ -439,13 +440,16 @@ export function AuthProvider({ children }) {
   );
 }
 
-// 在任何元件中使用
+// 使用 Context。這個模式也用於 NotificationContext，
+// 確保 Dashboard 和 Notifications 頁面同步。
 function Navbar() {
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications(); // 從 NotificationContext 取得
 
   return (
     <nav>
       <span>歡迎，{user?.username}</span>
+      <span>未讀通知: {unreadCount}</span>
       <button onClick={logout}>登出</button>
     </nav>
   );

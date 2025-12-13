@@ -195,10 +195,11 @@ SPA 路由對應的頁面：
 |------|------|------|
 | **Login.tsx** | `/login` | 登入頁面 |
 | **Register.tsx** | `/register` | 註冊頁面 |
-| **Dashboard.tsx** | `/dashboard` | 儀表板，顯示統計資料 |
+| **Dashboard.tsx** | `/` | 儀表板，顯示統計資料、可點擊的 Recent Activity |
 | **Projects.tsx** | `/projects` | 專案列表 |
 | **ProjectDetail.tsx** | `/projects/:id` | 專案詳情與看板 |
-| **MyTasks.tsx** | `/my-tasks` | 個人任務列表 |
+| **MyTasks.tsx** | `/tasks/my` | 個人任務列表 |
+| **Notifications.tsx** | `/notifications` | 通知列表，支援 mark all as read |
 | **Settings.tsx** | `/settings` | 使用者設定 |
 
 ### 📂 frontend/components/ (共用元件)
@@ -217,6 +218,7 @@ SPA 路由對應的頁面：
 | 檔案 | 用途 | 說明 |
 |------|------|------|
 | **AuthContext.tsx** | 認證狀態 | 登入使用者資訊、Token、登入/登出方法 |
+| **NotificationContext.tsx** | 通知狀態同步 | Dashboard 與 Notifications 頁面共享通知狀態，支援 markAllAsRead 同步 |
 
 ### 📂 frontend/providers/ (Provider 元件)
 
@@ -344,6 +346,7 @@ index.tsx (入口)
   └─> App.tsx
        ├─> providers/QueryProvider.tsx (React Query)
        ├─> context/AuthContext.tsx (認證狀態)
+       ├─> context/NotificationContext.tsx (通知狀態同步)
        ├─> components/Layout.tsx (版面)
        └─> pages/* (頁面路由)
             ├─> hooks/useApi.ts (API 呼叫)
@@ -369,6 +372,7 @@ index.tsx (入口)
 - `frontend/hooks/useApi.ts` - API 管理
 - `frontend/pages/*.tsx` - 所有頁面
 - `frontend/context/AuthContext.tsx` - 認證
+- `frontend/context/NotificationContext.tsx` - 通知狀態同步
 
 **文件**
 - `README.md` - 專案說明
@@ -601,3 +605,5 @@ find frontend -name "*.ts" -o -name "*.tsx" | wc -l
 ---
 
 *本文件最後更新：2025 年 12 月 13 日*
+
+*GitHub: [HrdZvezda/NexusTask](https://github.com/HrdZvezda/NexusTask)*

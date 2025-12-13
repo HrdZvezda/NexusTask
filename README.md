@@ -2,6 +2,8 @@
 
 **[繁體中文](./README.zh-TW.md)** | **English**
 
+[![GitHub](https://img.shields.io/badge/GitHub-HrdZvezda%2FNexusTask-blue?logo=github)](https://github.com/HrdZvezda/NexusTask)
+
 NexusTeam is a full-stack collaboration suite that prioritizes backend resiliency, security, and clean architecture. The Flask API exposes modular blueprints backed by a service layer, caching, background jobs, realtime events, and structured observability, while the React client consumes the API through React Query and Socket.IO.
 
 ---
@@ -136,11 +138,12 @@ nexusteam/
 │   ├── requirements.txt            # Backend dependencies
 │   └── tests/                      # pytest suites for auth/projects/tasks/notifications/members/uploads/tags
 ├── frontend/
-│   ├── App.tsx                     # Auth-aware router + QueryProvider
+│   ├── App.tsx                     # Auth-aware router + QueryProvider + NotificationProvider
 │   ├── hooks/useApi.ts             # React Query hooks + optimistic updates
 │   ├── hooks/useSocket.ts          # Socket.IO helper + room helpers
 │   ├── providers/QueryProvider.tsx # React Query client bootstrap
 │   ├── context/AuthContext.tsx     # Auth session state
+│   ├── context/NotificationContext.tsx # Shared notification state (Dashboard + Notifications sync)
 │   └── components/pages/...        # UI modules
 ├── .start/dev                      # Convenience script to boot both apps
 ├── ARCHITECTURE.md                 # Comprehensive system architecture documentation (Chinese)
@@ -188,8 +191,10 @@ nexusteam/
 
 ## Frontend Experience
 
-- `App.tsx` wraps the router with `QueryProvider` and `AuthProvider`, so every route enforces authentication via `ProtectedRoute`.
+- `App.tsx` wraps the router with `QueryProvider`, `AuthProvider`, and `NotificationProvider`, so every route enforces authentication via `ProtectedRoute`.
+- **NotificationContext** provides shared notification state between Dashboard and Notifications pages, ensuring "mark all as read" actions sync instantly across views.
 - React Query hooks (`useApi.ts`) centralize fetching, caching, pagination, and optimistic updates for projects, tasks, comments, notifications, and profile settings.
+- **Dashboard Recent Activity** items are clickable and navigate directly to the related project page (with optional task deep-linking).
 - `useSocket.ts` manages the Socket.IO client, joins project rooms, watches notifications/tasks/members/comments, handles typing indicators, and invalidates caches when realtime events arrive.
 - Layout/components supply consistent navigation, dashboards, project boards, and personal task lists, while query hooks ensure data stays in sync with the backend.
 
@@ -403,7 +408,9 @@ gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:8888 app:app
 | **Centralized permission system** | **Done** | `services/permissions.py` prevents circular imports |
 | **Shared validators** | **Done** | `utils/validators.py` for Marshmallow, password, date, email |
 | **Comprehensive documentation** | **Done** | `ARCHITECTURE.md` with detailed Chinese explanations |
-| Email/notification digests | In progress | Provide SMTP creds + extend Celery handlers |
+| **Email/notification digests** | In progress | Provide SMTP creds + extend Celery handlers |
+| **Notification state sync** | **Done** | `NotificationContext.tsx` syncs Dashboard ↔ Notifications |
+| **Clickable activity items** | **Done** | Dashboard Recent Activity links to projects/tasks |
 | Dark mode & responsive polish | Planned | Requires updated design tokens |
 | Docker / Compose packaging | Planned | Containerize API, Redis, worker, frontend |
 | CI/CD & frontend unit tests | Planned | Add Vitest + pipeline-wide quality gates |
