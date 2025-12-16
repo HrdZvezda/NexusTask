@@ -1,0 +1,29 @@
+[flake8]
+max-line-length = 127
+exclude =
+    .git,
+    __pycache__,
+    venv,
+    env,
+    .venv,
+    migrations,
+    .pytest_cache,
+    *.pyc,
+    .DS_Store
+
+# Ignore common Flask/SQLAlchemy patterns
+ignore =
+    # E501: line too long (handled by black)
+    E501,
+    # W503: line break before binary operator (conflicts with black)
+    W503,
+    # E203: whitespace before ':' (conflicts with black)
+    E203,
+    # F401: imported but unused (common in __init__.py files)
+    # E402: module level import not at top of file (common in Flask apps)
+
+per-file-ignores =
+    __init__.py:F401,F403
+    conftest.py:E402
+
+max-complexity = 10
