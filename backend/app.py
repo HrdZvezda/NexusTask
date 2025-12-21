@@ -303,12 +303,10 @@ limiter = Limiter(
     storage_options={"socket_connect_timeout": 30}, # 連接 Redis 超過 30 秒就放棄
     strategy="fixed-window", # 每分鐘00:00 - 00:59, 01:00 - 01:59... 
     # 開發模式下可以關閉限流
-    '''
-    如果（不是開發環境）或（明確啟用限流）  → 開啟限流
-    開發環境 + 沒設定 ENABLE_RATE_LIMIT → 關閉（開發時不擋你）
-    生產環境                           → 開啟（保護伺服器）
-    開發環境 + ENABLE_RATE_LIMIT=true  → 開啟（測試限流功能）
-    '''
+    # 如果（不是開發環境）或（明確啟用限流）→ 開啟限流
+    # 開發環境 + 沒設定 ENABLE_RATE_LIMIT → 關閉（開發時不擋你）
+    # 生產環境 → 開啟（保護伺服器）
+    # 開發環境 + ENABLE_RATE_LIMIT=true → 開啟（測試限流功能）
     enabled=os.getenv('FLASK_ENV') != 'development' or os.getenv('ENABLE_RATE_LIMIT', 'false').lower() == 'true'
 )
 
