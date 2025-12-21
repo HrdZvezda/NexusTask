@@ -76,7 +76,7 @@ app.py (入口點，你現在在這裡)
 from flask import Flask, request, jsonify
 
 # Flask-CORS: 處理跨來源請求
-# 【什麼是 CORS？】
+# 【什麼是 CORS？】Cross-Origin Resource Sharing
 # 當前端 (localhost:3000) 要請求後端 (localhost:8888) 時，
 # 瀏覽器會因為「安全原因」阻擋這個請求（因為網址不同）
 # CORS 設定告訴瀏覽器：「沒關係，我允許這個來源的請求」
@@ -177,12 +177,18 @@ CORS 設定告訴瀏覽器：「這些來源是我允許的，放行吧！」
 - localhost:5173 - Vite 開發伺服器
 - 127.0.0.1:5173 - 同上，只是用 IP 而不是 localhost
 - localhost:5500 - Live Server（VS Code 擴展）
+- CORS_ORIGINS 環境變數 - 部署後的前端網址    
 """
 allowed_origins = os.getenv(
     'CORS_ORIGINS', 
     'http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:5173,http://127.0.0.1:5173,http://127.0.0.1:5500,http://localhost:5500'
 ).split(',')
-# 紀錄目前允許的前端來源，方便除錯
+'''
+app.logger.info
+- app -  Flask 應用程式
+- logger - Flask 的日誌工具,日誌記錄器
+- info - 日誌等級, info 為一般訊息
+'''
 app.logger.info(f"CORS allowed origins: {allowed_origins}")
 
 """
@@ -218,6 +224,8 @@ jwt = JWTManager(app)
 # 註冊 token 黑名單檢查器
 # 當使用者登出後，他們的 token 會被加入黑名單
 # 這個回調函數會在每次請求時檢查 token 是否被撤銷
+# jwt_header: token 的 header(設定)
+# jwt_payload: token 的 payload(資料)
 @jwt.token_in_blocklist_loader
 def check_if_token_in_blocklist(jwt_header, jwt_payload):
     return check_if_token_revoked(jwt_header, jwt_payload)
@@ -228,7 +236,12 @@ Bcrypt(app) 初始化密碼加密系統
 """
 bcrypt = Bcrypt(app)
 
-# 把 bcrypt 存到 app.extensions，讓其他模組可以存取
+'''
+把 bcrypt 存到 app.extensions，讓其他file可以存取
+extensions 是 Flask 的一個機制，讓我們可以跨模組分享工具
+在其他file可以from flask import current_app
+current_app是flask內建的,代表目前正在處理請求的 Flask 應用程式
+'''
 app.extensions['bcrypt'] = bcrypt
 
 # ============================================
@@ -236,16 +249,20 @@ app.extensions['bcrypt'] = bcrypt
 # ============================================
 
 """
-初始化快取層
+初始化快取層 - cache
 開發環境使用 SimpleCache（記憶體）
 生產環境使用 Redis
+SimpleCache 是 Flask-Caching 提供的簡單快取實例,程式重啟就清空
+Redis 是一個專業的快取伺服器,資料會保存在記憶體中,程式重啟不會清空
 """
 init_cache(app)
 app.logger.info('Cache initialized')
 
 """
-初始化 WebSocket
+初始化 WebSocket - socketio
 用於即時通知和任務同步
+Flask-SocketIO 是 Flask 的 WebSocket 擴展
+Socket.IO 是底層的 WebSocket 函式庫
 """
 init_socketio(app)
 app.logger.info('SocketIO initialized')
@@ -253,6 +270,8 @@ app.logger.info('SocketIO initialized')
 """
 初始化 API 文件（Swagger）
 存取路徑：/api/docs
+flasgger 是 Flask 的 Swagger 擴展，提供 API 文件 UI 和 OpenAPI 規格
+swagger - 自動產生的「API 說明書 + 測試台」
 """
 init_swagger(app)
 app.logger.info('Swagger API docs initialized at /api/docs')
@@ -269,20 +288,27 @@ Limiter 初始化請求限流
 防止惡意使用者發送過多請求
 
 設定說明：
-- key_func=get_remote_address: 用 IP 地址來識別使用者
-- default_limits: 預設限制（每天 1000 次，每小時 200 次）
-- storage_uri: 儲存限流資訊的地方（開發環境用記憶體）
-- strategy: 限流策略（固定時間窗口）
+- app=app: 將限流器綁定到 Flask 應用程式
+- key_func=get_remote_address: 用什麼來識別使用者
+- storage_uri: 請求計數要存在哪（開發環境用記憶體,生產環境用Redis）
+- strategy: 限流策略（固定時間窗口or滑動時間窗口）
+- enabled: 是否啟用限流
 """
 limiter = Limiter(
     app=app,
-    key_func=get_remote_address,
+    key_func=get_remote_address, # 用 IP 來識別使用者,也可以用user_id API_KEY等
     # 開發環境放寬限制，避免頻繁測試時被擋
     default_limits=["10000 per day", "1000 per hour", "100 per minute"],
-    storage_uri=os.getenv('REDIS_URL', 'memory://'),
-    storage_options={"socket_connect_timeout": 30},
-    strategy="fixed-window",
+    storage_uri=os.getenv('REDIS_URL', 'memory://'), # 如果有設定REDIS_URL 環境變數 → 用 Redis, 否則用記憶體memory://
+    storage_options={"socket_connect_timeout": 30}, # 連接 Redis 超過 30 秒就放棄
+    strategy="fixed-window", # 每分鐘00:00 - 00:59, 01:00 - 01:59... 
     # 開發模式下可以關閉限流
+    '''
+    如果（不是開發環境）或（明確啟用限流）  → 開啟限流
+    開發環境 + 沒設定 ENABLE_RATE_LIMIT → 關閉（開發時不擋你）
+    生產環境                           → 開啟（保護伺服器）
+    開發環境 + ENABLE_RATE_LIMIT=true  → 開啟（測試限流功能）
+    '''
     enabled=os.getenv('FLASK_ENV') != 'development' or os.getenv('ENABLE_RATE_LIMIT', 'false').lower() == 'true'
 )
 
@@ -306,47 +332,47 @@ def setup_logging(app):
     - app.log: 記錄一般資訊（誰登入、什麼請求）
     - error.log: 只記錄錯誤（方便快速找問題）
     """
-    if not app.debug:
-        # 確保 logs 目錄存在
-        if not os.path.exists('logs'):
-            os.mkdir('logs')
-        
-        # 設定日誌格式
-        # [時間] 等級 in 模組: 訊息
-        # 例如：[2024-01-15 10:30:00] INFO in auth: User login successful
-        formatter = logging.Formatter(
-            '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
-        )
-        
-        # 一般資訊日誌
-        # RotatingFileHandler: 當檔案太大時，會自動建立新檔案
-        # maxBytes=10240000: 最大 10MB
-        # backupCount=10: 最多保留 10 個備份檔案
-        info_handler = RotatingFileHandler(
-            'logs/app.log',
-            maxBytes=10240000,
-            backupCount=10
-        )
-        info_handler.setLevel(logging.INFO)
-        info_handler.setFormatter(formatter)
-        
-        # 錯誤日誌
-        error_handler = RotatingFileHandler(
-            'logs/error.log',
-            maxBytes=10240000,
-            backupCount=10
-        )
-        error_handler.setLevel(logging.ERROR)
-        error_handler.setFormatter(formatter)
-        
-        # 把處理器加到 app 的日誌系統
-        app.logger.addHandler(info_handler)
-        app.logger.addHandler(error_handler)
-        app.logger.setLevel(logging.INFO)
-        
-        app.logger.info('Application startup')
+    # 確保 logs 目錄存在
+    if not os.path.exists('logs'):
+        os.mkdir('logs')
+    
+    # 設定日誌格式
+    # [時間] 等級 in 模組: 訊息
+    # 例如：[2024-01-15 10:30:00] INFO in auth: User login successful
+    formatter = logging.Formatter(
+        '[%(asctime)s] %(levelname)s in %(module)s: %(message)s'
+    )
+    
+    # 一般資訊日誌
+    # RotatingFileHandler: 當檔案太大時，會自動建立新檔案
+    # maxBytes=10240000: 最大 10MB
+    # backupCount=10: 最多保留 10 個備份檔案
+    info_handler = RotatingFileHandler(
+        'logs/app.log',
+        maxBytes=10240000,
+        backupCount=10
+    )
+    info_handler.setLevel(logging.INFO)
+    info_handler.setFormatter(formatter)
+    
+    # 錯誤日誌
+    error_handler = RotatingFileHandler(
+        'logs/error.log',
+        maxBytes=10240000,
+        backupCount=10
+    )
+    error_handler.setLevel(logging.ERROR)
+    error_handler.setFormatter(formatter)
+    
+    # 把處理器加到 app 的日誌系統
+    app.logger.addHandler(info_handler)
+    app.logger.addHandler(error_handler)
+    app.logger.setLevel(logging.INFO)
+    
+    app.logger.info('Application startup')
 
 # 在非除錯模式下啟用日誌
+# 如果不是除錯模式(通常是生產環境)
 if not app.debug:
     setup_logging(app)
 
@@ -454,6 +480,7 @@ def expired_token_callback(jwt_header, jwt_payload):
     
     【對應前端】apiService.ts 的 tryRefreshToken() 函數
     """
+    # {request.remote_addr} - 當前請求的 IP 位址
     app.logger.warning(f"Expired token attempt from: {request.remote_addr}")
     return jsonify({
         'error': 'token_expired',
@@ -633,20 +660,26 @@ def log_response(response):
     在每個請求處理完成後執行
     
     記錄：回應的狀態碼
-    並加上安全相關的 HTTP 標頭
     """
     if not app.debug:
         app.logger.info(f"Response: {response.status_code} for {request.method} {request.path}")
-    
-    # 加上安全標頭
+   
+    return response
+
+@app.after_request
+def add_security_headers(response):
+    """
+    加上安全相關的 HTTP 標頭
+    """
+
     # X-Content-Type-Options: 防止瀏覽器猜測 MIME 類型
     response.headers['X-Content-Type-Options'] = 'nosniff'
     # X-Frame-Options: 防止網頁被嵌入到 iframe 中（防止點擊劫持）
     response.headers['X-Frame-Options'] = 'DENY'
     # X-XSS-Protection: 啟用瀏覽器的 XSS 過濾器
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    
-    return response
+
+    return response 
 
 # ============================================
 # 健康檢查端點
