@@ -159,10 +159,10 @@ class Config:
     - max_overflow: 超過 pool_size 時最多可以再建立多少個連接
     """
     SQLALCHEMY_ENGINE_OPTIONS = {
-        'pool_size': int(os.getenv('DB_POOL_SIZE', 10)),
+        'pool_size': int(os.getenv('DB_POOL_SIZE', 5)),
         'pool_recycle': int(os.getenv('DB_POOL_RECYCLE', 3600)),
         'pool_pre_ping': True,
-        'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', 20))
+        'max_overflow': int(os.getenv('DB_MAX_OVERFLOW', 10))
     }
     
     # ============================================
