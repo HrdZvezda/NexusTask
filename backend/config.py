@@ -319,12 +319,21 @@ class Config:
     【設定說明】
     這裡使用 Gmail 的 SMTP 伺服器作為預設值。
     如果要使用其他郵件服務，需要修改這些設定。
+    
+    Gmail 的話要用「應用程式密碼」
+    如果你要用 Gmail 發信，不能用普通密碼！
+    步驟：
+    Google 帳號 → 安全性 → 兩步驟驗證（開啟）
+    安全性 → 應用程式密碼 → 產生一組 16 碼密碼
+    把這組密碼填入 MAIL_PASSWORD
+    
+    盡量用專門的帳號寄信, 免費帳號每天最多500封
     """
     MAIL_SERVER = os.getenv('MAIL_SERVER', 'smtp.gmail.com')
-    MAIL_PORT = int(os.getenv('MAIL_PORT', 587))
-    MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true'
-    MAIL_USERNAME = os.getenv('MAIL_USERNAME')  # 你的 email 帳號
-    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')  # 你的 email 密碼或應用程式密碼
+    MAIL_PORT = int(os.getenv('MAIL_PORT', 587)) # 587(TSL) or 465(SSL)
+    MAIL_USE_TLS = os.getenv('MAIL_USE_TLS', 'True').lower() == 'true' # 是否加密
+    MAIL_USERNAME = os.getenv('MAIL_USERNAME')  # 寄信人的 email 帳號
+    MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')  # 寄信人的 email 密碼或應用程式密碼
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER', 'noreply@taskmanager.com')
     
     # ============================================
@@ -339,9 +348,12 @@ class Config:
     DEBUG > INFO > WARNING > ERROR > CRITICAL
     
     開發環境可以用 DEBUG，生產環境建議用 INFO 或 WARNING
+    
+    這個專案已經有寫在app.py了, 所以這裡可以不寫
+    but 建議寫在config.py中, 這樣可以方便修改, 而且可以透過環境變數修改
     """
-    LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
-    LOG_FILE = os.getenv('LOG_FILE', 'logs/app.log')
+    # LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO')
+    # LOG_FILE = os.getenv('LOG_FILE', 'logs/app.log')
     
     # ============================================
     # 安全設定
@@ -356,7 +368,7 @@ class Config:
     PASSWORD_MIN_LENGTH = int(os.getenv('PASSWORD_MIN_LENGTH', 8))
     PASSWORD_REQUIRE_UPPERCASE = os.getenv('PASSWORD_REQUIRE_UPPERCASE', 'False').lower() == 'true'
     PASSWORD_REQUIRE_NUMBERS = os.getenv('PASSWORD_REQUIRE_NUMBERS', 'False').lower() == 'true'
-    PASSWORD_REQUIRE_SPECIAL = os.getenv('PASSWORD_REQUIRE_SPECIAL', 'False').lower() == 'true'
+    PASSWORD_REQUIRE_SPECIAL = os.getenv('PASSWORD_REQUIRE_SPECIAL', 'False').lower() == 'true' # 特殊符號
     
     # ============================================
     # Celery 設定（非同步任務）
@@ -366,7 +378,7 @@ class Config:
     Celery 設定
     
     【什麼是 Celery？】
-    Celery 是一個非同步任務佇列，用來處理耗時的任務，例如：
+    Celery 是一個非同步任務佇列，用來處理耗時的任務可以在背景做，例如：
     - 發送大量郵件
     - 產生報表
     - 處理大量資料
@@ -381,14 +393,14 @@ class Config:
     # ============================================
     
     # API 版本
-    API_VERSION = '2.1.0'
+    # API_VERSION = '2.1.1'
     
     # 時區設定
     TIMEZONE = os.getenv('TIMEZONE', 'UTC')
     
     # 分頁設定
     DEFAULT_PAGE_SIZE = int(os.getenv('DEFAULT_PAGE_SIZE', 20))  # 預設每頁筆數
-    MAX_PAGE_SIZE = int(os.getenv('MAX_PAGE_SIZE', 100))  # 最大每頁筆數
+    MAX_PAGE_SIZE = int(os.getenv('MAX_PAGE_SIZE', 50))  # 最大每頁筆數
     
     # ============================================
     # 快取設定
@@ -410,7 +422,11 @@ class Config:
     # ============================================
     
     """
-    SocketIO 設定
+    SocketIO 設定(即時通知or即時更新)
+    async mode:
+    eventlet	輕量級，適合 I/O 密集型（如 WebSocket）,需pip i eventlet
+    gevent	類似 eventlet，另一種選擇
+    threading	用多執行緒，簡單但效能較差
     """
     SOCKETIO_MESSAGE_QUEUE = os.getenv('SOCKETIO_MESSAGE_QUEUE', REDIS_URL)
     SOCKETIO_ASYNC_MODE = os.getenv('SOCKETIO_ASYNC_MODE', 'eventlet')
@@ -424,8 +440,8 @@ class Config:
     
     用於防止暴力破解攻擊
     """
-    LOGIN_ATTEMPT_LOCKOUT_THRESHOLD = int(os.getenv('LOGIN_ATTEMPT_LOCKOUT_THRESHOLD', 5))
-    LOGIN_ATTEMPT_LOCKOUT_DURATION_MINUTES = int(os.getenv('LOGIN_ATTEMPT_LOCKOUT_DURATION_MINUTES', 15))
+    LOGIN_ATTEMPT_LOCKOUT_THRESHOLD = int(os.getenv('LOGIN_ATTEMPT_LOCKOUT_THRESHOLD', 5)) # 登入失敗幾次後鎖定帳號	
+    LOGIN_ATTEMPT_LOCKOUT_DURATION_MINUTES = int(os.getenv('LOGIN_ATTEMPT_LOCKOUT_DURATION_MINUTES', 15)) # 鎖定時間
     
     # 密碼重設 Token 過期時間（小時）
     PASSWORD_RESET_TOKEN_EXPIRES_HOURS = int(os.getenv('PASSWORD_RESET_TOKEN_EXPIRES_HOURS', 1))
@@ -433,14 +449,19 @@ class Config:
     # ============================================
     # 維護模式
     # ============================================
-    
-    MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() == 'true'
+    # 因為app.py沒有寫維護模式, 所以這邊註解起來
+    # MAINTENANCE_MODE = os.getenv('MAINTENANCE_MODE', 'False').lower() == 'true'
     
     # ============================================
     # 設定驗證
     # ============================================
-    
-    @staticmethod
+    """
+    類型	                能存取什麼	用途
+    實例方法	            self（物件的資料）	操作單個物件的資料
+    靜態方法@staticmethod	什麼都不能存取	工具函數，跟物件無關
+    類別方法@classmethod	cls（類別本身）	操作類別的資料，或建立物件
+    """
+    @staticmethod # 固定寫法
     def validate():
         """
         驗證設定是否正確
@@ -452,6 +473,11 @@ class Config:
         【檢查項目】
         1. 生產環境是否有設定必要的環境變數
         2. 是否還在使用預設的 SECRET_KEY
+
+        【情況	            用哪個】
+        正常回傳結果	    return
+        錯誤但可以處理	    return None 或回傳錯誤碼
+        嚴重錯誤，必須停止	 raise
         """
         # 生產環境必須設定的環境變數
         required_in_production = [
@@ -461,14 +487,18 @@ class Config:
         ]
         
         # 只在生產環境檢查
+        # 開發環境用預設值就能跑, 測試用假資料也能跑
         if Config.ENV == 'production':
-            missing = []
+            missing = [] # 空list用來存缺少的環境變數
+
+            # 
             for key in required_in_production:
-                if not os.getenv(key):
-                    missing.append(key)
+                if not os.getenv(key): # 如果這個環境變數不存在,如果全部都有設定的話, missing 就會是空的
+                    missing.append(key) # 就把這個環境變數加入到list中
             
             # 如果有缺少的環境變數，拋出錯誤
-            if missing:
+            if missing: # 如果 missing 清單「不是空的」（有缺少的）
+                # raise：拋出錯誤，程式停止
                 raise ValueError(
                     f"Missing required environment variables in production: {', '.join(missing)}"
                 )
@@ -480,12 +510,13 @@ class Config:
 
 # ============================================
 # 環境特定設定
+# (Config) = 繼承自Config class,繼承 Config 的所有設定，只覆蓋需要改變的部分
 # ============================================
 
 class DevelopmentConfig(Config):
     """
-    開發環境設定
-    
+    開發環境設定. 加了除錯功能
+
     【特點】
     - DEBUG 模式開啟
     - SQL 查詢會印出來（方便除錯）
@@ -496,12 +527,20 @@ class DevelopmentConfig(Config):
 
 class ProductionConfig(Config):
     """
-    生產環境設定
+    生產環境設定. 加了安全性功能
     
     【特點】
     - DEBUG 模式關閉
     - 強制使用 HTTPS
     - 更嚴格的安全設定
+    
+    SSL: Secure Sockets Layer
+    TLS: Transport Layer Security, 新版加密協議, SSL升級版 
+    HTTPS：HTTP + 安全層（SSL/TLS）
+    - 加密:資料傳輸時加密
+    - 身份驗證:確保資料來源可靠
+    - 資料完整性:防止資料被篡改
+
     """
     DEBUG = False
     TESTING = False
@@ -510,23 +549,27 @@ class ProductionConfig(Config):
 
 class TestingConfig(Config):
     """
-    測試環境設定
+    測試環境設定. 加了測試功能
     
+    Flask-WTF = (Flask 的表單擴展套件）
+    CSRF = Cross-Site Request Forgery（跨站請求偽造, 偽造用戶請求）
+    XSS = Cross-Site Scripting（跨站腳本攻擊, 注入惡意 JavaScript, 危險程度更高）
     【特點】
     - 使用記憶體資料庫（每次測試都是乾淨的）
     - 關閉 CSRF 保護（方便測試）
     """
-    TESTING = True
+    TESTING = True # 使用記憶體資料庫（每次測試都是乾淨的）
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'  # 記憶體資料庫
-    WTF_CSRF_ENABLED = False
+    # CSRF未使用，專案用 JWT放在localstorage 所以不需要另外寫CSRF
+    # WTF_CSRF_ENABLED = False
 
 
 # ============================================
-# 設定字典
+# 設定dict
 # ============================================
 
 """
-config 字典讓我們可以根據環境名稱取得對應的設定類別
+config dict讓我們可以根據環境名稱取得對應的設定類別
 
 使用方式：
 config_class = config.get('development')  # 取得 DevelopmentConfig
