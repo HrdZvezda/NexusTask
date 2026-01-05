@@ -65,27 +65,27 @@ export const Login: React.FC = () => {
   // ============================================
   // 狀態管理
   // ============================================
-  
+
   // 表單欄位狀態
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   // 錯誤訊息
   const [error, setError] = useState('');
-  
+
   // 載入狀態（防止重複提交）
   const [isLoading, setIsLoading] = useState(false);
-  
+
   // 從 AuthContext 取得 login 函數
   const { login } = useAuth();
-  
+
   // React Router 的導航函數
   const navigate = useNavigate();
 
   // ============================================
   // 表單提交處理
   // ============================================
-  
+
   /**
    * 處理登入表單提交
    * 
@@ -109,13 +109,13 @@ export const Login: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     // 阻止表單預設的頁面刷新行為
     e.preventDefault();
-    
+
     // 清除之前的錯誤訊息
     setError('');
-    
+
     // 設定載入狀態（按鈕會顯示「Signing in...」）
     setIsLoading(true);
-    
+
     try {
       // 呼叫 login 函數
       // 這個函數來自 AuthContext，會：
@@ -123,7 +123,7 @@ export const Login: React.FC = () => {
       // 2. 儲存 token 到 localStorage
       // 3. 更新全域的 user 狀態
       await login(email, password);
-      
+
       // 登入成功，跳轉到首頁
       navigate('/');
     } catch (err) {
@@ -138,14 +138,14 @@ export const Login: React.FC = () => {
   // ============================================
   // 渲染 UI
   // ============================================
-  
+
   return (
     // 全螢幕置中的容器
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      
+
       {/* 登入卡片 */}
       <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-slate-100">
-        
+
         {/* ========== Logo 和標題 ========== */}
         <div className="text-center mb-8">
           {/* Logo */}
@@ -159,7 +159,7 @@ export const Login: React.FC = () => {
 
         {/* ========== 登入表單 ========== */}
         <form onSubmit={handleSubmit} className="space-y-6">
-          
+
           {/* 錯誤訊息 */}
           {error && (
             <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center">
@@ -217,8 +217,8 @@ export const Login: React.FC = () => {
         {/* ========== 註冊連結 ========== */}
         <div className="mt-8 text-center border-t border-slate-100 pt-6">
           <p className="text-sm text-slate-500 mb-2">Don't have an account?</p>
-          <Link 
-            to="/register" 
+          <Link
+            to="/register"
             className="text-sm font-semibold text-indigo-600 hover:text-indigo-800 hover:underline"
           >
             Create an account
@@ -227,7 +227,7 @@ export const Login: React.FC = () => {
 
         {/* ========== 測試帳號提示 ========== */}
         <div className="mt-6 text-center text-xs text-slate-400">
-          <p>Demo Account: demo@test.com / demo</p>
+          <p>Demo Account: howard@test.com / password</p>
         </div>
       </div>
     </div>
