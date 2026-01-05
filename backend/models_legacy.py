@@ -41,12 +41,16 @@ Notification        ←→      Notification
 後端資料會經過 apiService.ts 的 transform 函數轉換成前端格式
 例如：transformUser(), transformTask(), transformProject()
 """
+'''
+系統管理員是否要移除
 
+'''
 # ============================================
 # 導入需要的模組
 # ============================================
 
-# SQLAlchemy 是 Python 最流行的 ORM 框架
+# SQLAlchemy 是 Python 最流行的 ORM 框架, 會根據你設定的資料庫，自動產生正確的 SQL
+# 可以連接任何資料庫, 例如 MySQL, PostgreSQL, SQLite 等
 # Flask-SQLAlchemy 是專門給 Flask 用的版本
 from flask_sqlalchemy import SQLAlchemy
 
@@ -91,7 +95,7 @@ class User(db.Model):
     - primary_key=True：這是主鍵（唯一識別每筆資料）
     - unique=True：這個欄位的值不能重複
     - nullable=False：這個欄位不能是空的
-    - index=True：建立索引，加快查詢速度
+    - index=True：建立索引，加快查詢速度(常常拿來查詢的欄位建議加索引)
     - default=xxx：預設值
     """
     
@@ -102,7 +106,7 @@ class User(db.Model):
     # String(255) 表示最多 255 個字元
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     
-    # 密碼雜湊：儲存加密後的密碼（不是明文！）
+    # 密碼雜湊：儲存加密後的密碼
     password_hash = db.Column(db.String(225), nullable=False)
     
     # 使用者名稱：顯示用的名字
@@ -130,7 +134,7 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     
     # 上次登入時間
-    last_login = db.Column(db.DateTime)
+    # last_login = db.Column(db.DateTime)
     
     # 建立時間（自動設定為現在時間）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -253,23 +257,23 @@ class Project(db.Model):
     # 專案成員
     members = db.relationship('ProjectMember', backref='project', lazy=True, cascade='all,delete-orphan')
     
-    # 專案相關的通知
-    notifications = db.relationship('Notification', backref='project', lazy=True)
+    # 專案相關的通知（刪除專案時也刪除通知）
+    notifications = db.relationship('Notification', backref='project', lazy=True, cascade='all,delete-orphan')
     
-    # 專案的活動記錄
-    activity_logs = db.relationship('ActivityLog', backref='project', lazy=True)
+    # 專案的活動記錄（刪除專案時也刪除記錄）
+    activity_logs = db.relationship('ActivityLog', backref='project', lazy=True, cascade='all,delete-orphan')
     
-    # 專案的附件
-    attachments = db.relationship('Attachment', backref='project', lazy=True)
+    # 專案的附件（刪除專案時也刪除附件）
+    attachments = db.relationship('Attachment', backref='project', lazy=True, cascade='all,delete-orphan')
     
     # 專案的標籤
     tags = db.relationship('Tag', backref='project', lazy=True, cascade='all,delete-orphan')
     
-    # 任務範本
-    templates = db.relationship('TaskTemplate', backref='project', lazy=True)
+    # 任務範本（刪除專案時也刪除範本）
+    templates = db.relationship('TaskTemplate', backref='project', lazy=True, cascade='all,delete-orphan')
     
-    # 統計快照
-    stat_snapshots = db.relationship('ProjectStatSnapshot', backref='project', lazy=True)
+    # 統計快照（刪除專案時也刪除快照）
+    stat_snapshots = db.relationship('ProjectStatSnapshot', backref='project', lazy=True, cascade='all,delete-orphan')
 
     # ===== 索引（加快查詢速度）=====
     __table_args__ = (
