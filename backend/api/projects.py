@@ -288,8 +288,8 @@ def get_my_projects():
             joinedload(Project.owner)
         )
         
-        # 合併查詢結果
-        all_projects = owned_projects.union(member_projects).paginate(
+        # 合併查詢結果（使用 union_all 避免 PostgreSQL JSON 比較錯誤）
+        all_projects = owned_projects.union_all(member_projects).paginate(
             page=page, per_page=per_page, error_out=False
         )
         
