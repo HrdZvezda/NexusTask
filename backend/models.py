@@ -12,7 +12,7 @@ from models import db, User, Project, Task
 
 # 從 models_legacy 重新導出所有內容
 from models_legacy import *
-from models_legacy import db
+from models_legacy import db # 👈 不管怎樣，db 一定要進來！
 
 # 確保可以直接 import
 __all__ = [

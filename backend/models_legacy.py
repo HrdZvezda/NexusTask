@@ -244,7 +244,7 @@ class Project(db.Model):
     # 是否公開（讓非成員也能看到）
     is_public = db.Column(db.Boolean, default=False)
     
-    # 專案設定（JSON 格式，可以存任意資料）
+    # 專案設定（JSON 格式，可以存任意資料[列表、字典、巢狀結構等]）
     settings = db.Column(db.JSON)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
@@ -252,6 +252,8 @@ class Project(db.Model):
     # ===== 關聯 =====
     
     # 專案的任務（刪除專案時也刪除所有任務）
+    # cascade='all,delete-orphan', 'all'：所有操作都會被串聯, 'delete-orphan'：刪除孤立的子物件
+    # cascade 透過外鍵知道哪些子資料屬於這個父資料
     tasks = db.relationship('Task', backref='project', lazy=True, cascade='all,delete-orphan')
     
     # 專案成員
@@ -318,6 +320,7 @@ class ProjectMember(db.Model):
     user = db.relationship('User', backref='project_memberships')
 
     # 唯一性約束：同一個使用者不能重複加入同一個專案
+    # UniqueConstraint 可以限制多欄位的唯一性(「同一個專案+同一個使用者」的組合不能重複)
     __table_args__ = (
         db.UniqueConstraint('project_id', 'user_id', name='unique_project_member'),
     )
@@ -440,15 +443,16 @@ class Task(db.Model):
     
     # 任務依賴關係
     dependencies = db.relationship('TaskDependency', foreign_keys='TaskDependency.task_id', 
-                                  backref='dependent_task', cascade='all,delete-orphan')
+        backref='dependent_task', cascade='all,delete-orphan')
 
     # ===== 索引（加快查詢速度）=====
+    # 同時對多個欄位建立索引 => 看欄位數量(2個以上＝複合索引)
+    # 第一個參數是索引名稱，後面是欄位名稱
     __table_args__ = (
         db.Index('idx_task_project_status', 'project_id', 'status'),   # 按專案和狀態查詢
         db.Index('idx_task_assigned_status', 'assigned_to', 'status'), # 按負責人和狀態查詢
         db.Index('idx_task_due_date', 'due_date'),                     # 按截止日期查詢
         db.Index('idx_task_created_at', 'created_at'),                 # 按建立時間查詢
-        # 新增：效能優化索引
         db.Index('idx_task_assigned_due', 'assigned_to', 'due_date'),  # 查詢用戶即將到期的任務
         db.Index('idx_task_project_priority', 'project_id', 'priority'), # 按專案和優先級查詢
         db.Index('idx_task_project_assigned', 'project_id', 'assigned_to'), # 按專案和負責人查詢
@@ -575,6 +579,7 @@ class TaskComment(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     
     # 父評論（如果是回覆的話）
+    # 自我關聯 - SQLAlchemy會自動把大駝峰變成底線分隔(TaskComment -> task_comment)
     parent_id = db.Column(db.Integer, db.ForeignKey('task_comment.id'), nullable=True)
     
     # 評論內容
