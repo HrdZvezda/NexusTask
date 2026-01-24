@@ -13,7 +13,7 @@ team-task-manager/
 ├── 📂 backend/          (後端 Flask API)
 ├── 📂 frontend/         (前端 React 應用)
 ├── 📂 .start/           (開發啟動腳本)
-├── 📂 k8s/              (Kubernetes 部署配置)
+├── 📂 .github/          (GitHub 設定)
 └── 📂 scripts/          (工具腳本)
 ```
 
@@ -23,20 +23,18 @@ team-task-manager/
 
 ### 核心文件
 
-| 檔案 | 用途 | 重要性 |
-|------|------|--------|
-| **README.md** | 專案說明（英文版），給面試官/GitHub 訪客看 | ⭐⭐⭐⭐⭐ |
-| **README.zh-TW.md** | 專案說明（繁體中文版） | ⭐⭐⭐⭐ |
-| **ARCHITECTURE.md** | 架構詳細說明，包含系統設計、資料流、技術選型 | ⭐⭐⭐⭐⭐ |
-| **CODE_REVIEW.md** | 程式碼審查報告，記錄改進建議和最佳實踐 | ⭐⭐⭐ |
-| **LICENSE** | 開源授權（MIT License） | ⭐⭐⭐ |
+| 檔案 | 用途 |
+|------|------|
+| **README.md** | 專案說明（英文版），給面試官/GitHub 訪客看 |
+| **README.zh-TW.md** | 專案說明（繁體中文版） |
+| **CODE_REVIEW.md** | 程式碼審查報告，記錄改進建議和最佳實踐 |
+| **LICENSE** | 開源授權（MIT License） |
 
 ### 部署文件
 
 | 檔案 | 用途 | 適用場景 |
 |------|------|----------|
-| **PORTFOLIO_DEPLOYMENT.md** | 🎯 **Railway 部署指南（推薦）** | 個人作品集展示、完整功能部署 |
-| **ARCHITECTURE.md** | 系統架構詳細說明 | 理解系統設計和技術選型 |
+| **DEPLOYMENT.md** | 🎯 **完整部署指南（推薦）** | GCP Cloud Run + Vercel + Neon 部署 |
 | **PROJECT_STRUCTURE.md** | 本檔案，專案結構說明 | 理解專案架構 |
 
 ---
@@ -46,6 +44,7 @@ team-task-manager/
 | 檔案 | 用途 | 說明 |
 |------|------|------|
 | **.env.example** | 環境變數範例模板 | 複製成 `.env` 後填入實際值 |
+| **.gitignore** | Git 忽略檔案清單 | 避免提交敏感檔案和暫存檔 |
 
 ---
 
@@ -66,13 +65,12 @@ team-task-manager/
 
 | 檔案 | 用途 | 使用平台 |
 |------|------|----------|
-| **railway.json** | Railway Web Service 配置 | Railway 平台主服務部署 |
-| **railway.worker.json** | Railway Celery Worker 配置 | Railway 背景任務服務 |
-| **railway.beat.json** | Railway Celery Beat 配置 | Railway 定時任務服務 |
-| **runtime.txt** | Python 版本指定 | Railway、Vercel 等平台 |
+| **Dockerfile** | Docker 容器建置配置 | GCP Cloud Run、本地 Docker |
+| **.dockerignore** | Docker 建置排除檔案 | 避免打包不必要的檔案 |
 | **.env** | 環境變數（本地開發） | **包含敏感資訊，不應提交到 Git** |
 | **.env.example** | 環境變數範例 | 新環境設定時參考 |
-| **.gitignore** | Git 忽略檔案清單 | 避免提交敏感檔案和暫存檔 |
+| **.flake8** | Flake8 程式碼檢查配置 | Python 程式碼風格檢查 |
+| **mypy.ini** | MyPy 型別檢查配置 | Python 靜態型別檢查 |
 
 ### 📂 backend/api/ (API 端點 - Blueprints)
 
@@ -81,14 +79,14 @@ team-task-manager/
 | 檔案 | 功能 | 主要端點 |
 |------|------|----------|
 | **__init__.py** | Blueprint 初始化 | - |
-| **auth.py** | 使用者認證 | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh`, `/auth/forgot-password`, `/auth/reset-password` |
+| **auth.py** | 使用者認證 | `/auth/register`, `/auth/login`, `/auth/logout`, `/auth/refresh` |
 | **projects.py** | 專案管理 | `/projects` (CRUD), `/projects/:id/members`, `/projects/:id/stats` |
 | **tasks.py** | 任務管理 | `/tasks` (CRUD), `/tasks/all`, `/tasks/my`, `/tasks/:id/comments` |
 | **notifications.py** | 通知系統 | `/notifications`, `/notifications/read`, `/notifications/unread-count` |
 | **members.py** | 成員管理 | `/projects/:id/members` (add/remove/update role) |
 | **tags.py** | 標籤系統 | `/tags` (CRUD) |
 | **uploads.py** | 檔案上傳 | `/uploads` (upload/download/delete attachments) |
-| **health.py** | 健康檢查 | `/health`, `/health/live`, `/health/ready`, `/health/detailed`, `/health/metrics` |
+| **health.py** | 健康檢查 | `/health`, `/health/live`, `/health/ready`, `/health/detailed` |
 
 ### 📂 backend/core/ (核心基礎設施)
 
@@ -156,7 +154,6 @@ pytest --cov=. --cov-report=html   # 生成覆蓋率報告
 | 檔案 | 用途 | 說明 |
 |------|------|------|
 | **task_manager.db** | SQLite 資料庫檔案 | 本地開發用，生產環境用 PostgreSQL |
-| **task_manager.db.bak** | 資料庫備份 | - |
 
 ⚠️ 這些檔案應在 `.gitignore` 中，不應提交到 Git
 
@@ -177,11 +174,11 @@ pytest --cov=. --cov-report=html   # 生成覆蓋率報告
 | **index.html** | HTML 入口檔案 | Vite 掛載點，定義 `<div id="root">` |
 | **index.tsx** | React 入口點 | 渲染 `<App />` 到 DOM |
 | **App.tsx** | 主應用元件 | 路由、AuthProvider、QueryProvider 包裝 |
+| **types.ts** | TypeScript 型別定義 | User、Project、Task、Notification 等介面 |
 | **vite.config.ts** | Vite 建置配置 | 開發伺服器、打包設定 |
 | **tsconfig.json** | TypeScript 配置 | 編譯選項、路徑映射 |
 | **package.json** | npm 套件依賴 | React、React Query、Socket.IO 等 |
 | **package-lock.json** | 依賴版本鎖定 | 確保團隊安裝相同版本 |
-| **.gitignore** | Git 忽略檔案 | `node_modules/`, `dist/` 等 |
 | **.env.local** | 環境變數（本地） | `VITE_API_URL` 設定後端網址 |
 | **README.md** | 前端專屬說明 | 啟動指令、技術棧 |
 | **metadata.json** | 專案中繼資料 | 可能用於建置資訊 |
@@ -218,7 +215,7 @@ SPA 路由對應的頁面：
 | 檔案 | 用途 | 說明 |
 |------|------|------|
 | **AuthContext.tsx** | 認證狀態 | 登入使用者資訊、Token、登入/登出方法 |
-| **NotificationContext.tsx** | 通知狀態同步 | Dashboard 與 Notifications 頁面共享通知狀態，支援 markAllAsRead 同步 |
+| **NotificationContext.tsx** | 通知狀態同步 | Dashboard 與 Notifications 頁面共享通知狀態 |
 
 ### 📂 frontend/providers/ (Provider 元件)
 
@@ -234,7 +231,7 @@ SPA 路由對應的頁面：
 
 | 檔案 | 用途 | 主要 Hooks |
 |------|------|------------|
-| **useApi.ts** | API 呼叫與資料管理 | `useProjects`, `useTasks`, `useNotifications`, `useComments`, `useProfile` 等 |
+| **useApi.ts** | API 呼叫與資料管理 | `useProjects`, `useTasks`, `useNotifications` 等 |
 | **useSocket.ts** | WebSocket 連線 | `useSocket`, `useProjectRoom`, `useNotificationListener` |
 
 ### 📂 frontend/services/ (服務層)
@@ -251,11 +248,6 @@ API 通訊封裝：
 |------|------|------|
 | **helpers.ts** | 輔助函數 | 日期格式化、字串處理等 |
 
-### 📂 frontend/types.ts (TypeScript 型別定義)
-
-定義所有資料結構：
-- `User`, `Project`, `Task`, `Notification`, `Comment` 等介面
-
 ---
 
 ## 📂 .start/ (開發啟動腳本)
@@ -271,25 +263,6 @@ API 通訊封裝：
 
 ---
 
-## 📂 k8s/ (Kubernetes 部署配置)
-
-| 檔案 | 用途 | 說明 |
-|------|------|------|
-| **nexusteam.yaml** | Kubernetes 資源定義 | Deployment、Service、ConfigMap、Secret、PVC |
-
-包含的資源：
-- Namespace: `nexusteam`
-- Deployments: API、PostgreSQL、Redis、Celery Worker、Celery Beat
-- Services: 負載均衡器
-- PersistentVolumeClaims: 資料持久化
-
-部署：
-```bash
-kubectl apply -f k8s/nexusteam.yaml
-```
-
----
-
 ## 📂 scripts/ (工具腳本)
 
 ### Shell 腳本
@@ -299,24 +272,6 @@ kubectl apply -f k8s/nexusteam.yaml
 | **backup-db.sh** | 備份 PostgreSQL 資料庫 | `DATABASE_URL=... ./scripts/backup-db.sh` |
 | **restore-db.sh** | 還原資料庫 | `./scripts/restore-db.sh backups/backup.sql.gz` |
 | **generate-secrets.sh** | 生成安全密鑰 | `./scripts/generate-secrets.sh` |
-
-功能說明：
-
-#### backup-db.sh
-- 使用 `pg_dump` 備份資料庫
-- 自動壓縮為 `.gz` 檔案
-- 清理 30 天前的舊備份
-- 儲存到 `backups/` 目錄
-
-#### restore-db.sh
-- 從備份檔案還原資料庫
-- 支援 `.sql` 和 `.sql.gz` 格式
-- 有確認提示避免誤操作
-
-#### generate-secrets.sh
-- 使用 `openssl rand -hex 32` 生成密鑰
-- 生成 `SECRET_KEY` 和 `JWT_SECRET_KEY`
-- 輸出完整 `.env` 範例
 
 ---
 
@@ -358,7 +313,7 @@ index.tsx (入口)
 
 ## 📊 檔案重要性等級
 
-### ⭐⭐⭐⭐⭐ 核心檔案（必須理解）
+### 核心檔案（必須理解）
 
 **後端**
 - `backend/app.py` - 應用入口
@@ -376,10 +331,9 @@ index.tsx (入口)
 
 **文件**
 - `README.md` - 專案說明
-- `ARCHITECTURE.md` - 架構文件
-- `PORTFOLIO_DEPLOYMENT.md` - 部署指南
+- `DEPLOYMENT.md` - 部署指南
 
-### ⭐⭐⭐⭐ 重要檔案（需要了解）
+### 重要檔案（需要了解）
 
 **後端**
 - `backend/core/cache.py` - 快取管理
@@ -392,11 +346,10 @@ index.tsx (入口)
 - `frontend/services/apiService.ts` - HTTP 封裝
 
 **配置**
-- `docker-compose.yml` - Docker 編排
 - `backend/requirements.txt` - Python 依賴
 - `frontend/package.json` - Node 依賴
 
-### ⭐⭐⭐ 輔助檔案（選擇性理解）
+### 輔助檔案（選擇性理解）
 
 **測試**
 - `backend/tests/*.py` - 測試套件
@@ -406,18 +359,17 @@ index.tsx (入口)
 - `.start/dev` - 開發啟動
 
 **部署**
-- `backend/Dockerfile` - Docker 映像
-- `k8s/nexusteam.yaml` - K8s 配置
-- `backend/railway.json` - Railway 配置
+- `backend/Dockerfile` - Docker 映像建置
+- `backend/.dockerignore` - Docker 排除設定
 
-### ⭐⭐ 配置檔案（必要但不需深入）
+### 配置檔案（必要但不需深入）
 
 - `.gitignore` - Git 忽略
 - `tsconfig.json` - TypeScript 配置
 - `vite.config.ts` - Vite 配置
 - `.env.example` - 環境變數範例
 
-### ⭐ 自動生成/暫存檔案（可忽略）
+### 自動生成/暫存檔案（可忽略）
 
 - `package-lock.json` - npm 鎖定
 - `vite-env.d.ts` - 型別定義
@@ -442,17 +394,16 @@ index.tsx (入口)
 → 在 `frontend/App.tsx` 加入路由
 
 **❓ 如何部署到線上？**
-→ 閱讀 `PORTFOLIO_DEPLOYMENT.md`（推薦）
-→ 或 `DEPLOYMENT.md`、`DOCKER_DEPLOYMENT.md`
+→ 閱讀 `DEPLOYMENT.md`
+→ 後端：GCP Cloud Run（Docker 容器）
+→ 前端：Vercel（全球 CDN）
+→ 資料庫：Neon PostgreSQL
 
 **❓ 如何執行測試？**
 → `cd backend && pytest`
 
 **❓ 如何啟動開發環境？**
 → `./.start/dev`（或手動啟動後端+前端）
-
-**❓ 如何理解系統架構？**
-→ 閱讀 `ARCHITECTURE.md`
 
 ---
 
@@ -470,9 +421,8 @@ index.tsx (入口)
 - **型別檔案**：`types.ts` 或 `*.types.ts`
 
 ### 配置檔案
-- **Docker**：`Dockerfile`, `docker-compose.yml`
+- **Docker**：`Dockerfile`, `.dockerignore`
 - **環境變數**：`.env`, `.env.example`, `.env.local`
-- **CI/CD**：`railway.json`, `render.yaml`
 
 ---
 
@@ -503,7 +453,6 @@ frontend/dist/                 # 建置產物
 ```bash
 .env.example                   # 環境變數範例
 backend/.env.example
-docker-compose.yml             # Docker 編排
 backend/requirements.txt       # Python 依賴
 frontend/package.json          # Node 依賴
 ```
@@ -516,7 +465,6 @@ frontend/package.json          # Node 依賴
 
 1. **閱讀文件**
    - `README.md` - 了解專案概況
-   - `ARCHITECTURE.md` - 理解系統設計
    - 本檔案 `PROJECT_STRUCTURE.md` - 掌握檔案結構
 
 2. **本地開發**
@@ -531,33 +479,10 @@ frontend/package.json          # Node 依賴
    - 查看對應的前端頁面（`frontend/pages/Login.tsx`）
 
 4. **部署到線上**
-   - 閱讀 `PORTFOLIO_DEPLOYMENT.md`
-   - 使用 Railway 部署後端（含完整功能）
+   - 閱讀 `DEPLOYMENT.md`
+   - 使用 GCP Cloud Run 部署後端
    - 使用 Vercel 部署前端
-   - 部署並測試所有功能
-
-5. **準備面試**
-   - 確保 Live Demo 運作正常
-   - 準備技術問答（參考 `PORTFOLIO_DEPLOYMENT.md` 的演示腳本）
-   - 在 GitHub README 加入 Demo 連結
-
----
-
-## 📈 專案統計
-
-```bash
-# 程式碼行數統計（排除依賴和建置產物）
-cloc . --exclude-dir=node_modules,venv,dist,build,.git
-
-# 檔案總數
-find . -type f ! -path '*/node_modules/*' ! -path '*/.git/*' ! -path '*/venv/*' | wc -l
-
-# Python 檔案數
-find backend -name "*.py" | wc -l
-
-# TypeScript 檔案數
-find frontend -name "*.ts" -o -name "*.tsx" | wc -l
-```
+   - 使用 Neon 建立 PostgreSQL 資料庫
 
 ---
 
@@ -567,8 +492,8 @@ find frontend -name "*.ts" -o -name "*.tsx" | wc -l
 - **框架**: Flask 3
 - **ORM**: SQLAlchemy 2 + Flask-SQLAlchemy 3
 - **認證**: Flask-JWT-Extended + Flask-Bcrypt
-- **快取**: Redis 5 + Flask-Caching 2
-- **背景任務**: Celery 5
+- **快取**: Redis 5 + Flask-Caching 2（選用）
+- **背景任務**: Celery 5（選用）
 - **即時通訊**: Flask-SocketIO 5
 - **API 文件**: Flasgger (Swagger)
 - **測試**: pytest + pytest-cov
@@ -585,25 +510,14 @@ find frontend -name "*.ts" -o -name "*.tsx" | wc -l
 - **圖示**: lucide-react
 
 ### 基礎設施
-- **資料庫**: PostgreSQL 15 (生產) / SQLite (開發)
-- **快取/訊息**: Redis 7
+- **資料庫**: PostgreSQL 15 (Neon) / SQLite (開發)
+- **快取/訊息**: Redis 7 (選用，未來擴展)
 - **部署平台**:
-  - **後端**: Railway（PostgreSQL + Redis + Celery）
+  - **後端**: GCP Cloud Run（Docker 容器）
   - **前端**: Vercel（全球 CDN）
 
 ---
 
-## 📞 需要幫助？
-
-如果對某個檔案或目錄有疑問：
-
-1. 查看檔案頂部的註解說明
-2. 閱讀 `ARCHITECTURE.md` 了解整體設計
-3. 參考對應的測試檔案（`backend/tests/`）
-4. 查看 Git 提交歷史了解檔案演變
-
----
-
-*本文件最後更新：2025 年 12 月 13 日*
+*本文件最後更新：2026 年 1 月 24 日*
 
 *GitHub: [HrdZvezda/NexusTask](https://github.com/HrdZvezda/NexusTask)*

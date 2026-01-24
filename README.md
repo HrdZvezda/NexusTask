@@ -4,6 +4,15 @@
 
 [![GitHub](https://img.shields.io/badge/GitHub-HrdZvezda%2FNexusTask-blue?logo=github)](https://github.com/HrdZvezda/NexusTask)
 
+## 🚀 Live Demo
+
+| Service | URL |
+|---------|-----|
+| **Frontend** | [https://nexus-task-xi.vercel.app](https://nexus-task-xi.vercel.app) |
+| **Backend API** | [https://nexustask-backend-160761384347.asia-east1.run.app](https://nexustask-backend-160761384347.asia-east1.run.app) |
+
+> Demo Account: `howard@test.com` / `password`
+
 NexusTeam is a full-stack collaboration suite that prioritizes backend resiliency, security, and clean architecture. The Flask API exposes modular blueprints backed by a service layer, caching, background jobs, realtime events, and structured observability, while the React client consumes the API through React Query and Socket.IO.
 
 ---
@@ -146,7 +155,7 @@ nexusteam/
 │   ├── context/NotificationContext.tsx # Shared notification state (Dashboard + Notifications sync)
 │   └── components/pages/...        # UI modules
 ├── .start/dev                      # Convenience script to boot both apps
-├── ARCHITECTURE.md                 # Comprehensive system architecture documentation (Chinese)
+├── DEPLOYMENT.md                   # Deployment guide (GCP Cloud Run + Vercel + Neon)
 ├── CODE_REVIEW.md                  # Code review report with recommendations
 └── README.md
 ```
@@ -397,6 +406,18 @@ gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:8888 app:app
 - Monitor `/health/*` endpoints and rate-limit headers; alert on slow DB/Redis checks or 5xx spikes.
 - Terminate TLS at your proxy/load balancer and keep HSTS enabled for HTTPS traffic.
 
+## Deployment
+
+This project uses a **free-tier stack** for deployment:
+
+| Service | Platform | Cost |
+|---------|----------|------|
+| Frontend | Vercel | Free |
+| Backend | GCP Cloud Run | Free tier |
+| Database | Neon PostgreSQL | Free 512MB |
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete deployment instructions.
+
 ## Roadmap
 
 | Area | Status | Notes |
@@ -411,8 +432,8 @@ gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:8888 app:app
 | **Email/notification digests** | In progress | Provide SMTP creds + extend Celery handlers |
 | **Notification state sync** | **Done** | `NotificationContext.tsx` syncs Dashboard ↔ Notifications |
 | **Clickable activity items** | **Done** | Dashboard Recent Activity links to projects/tasks |
+| **GCP Cloud Run deployment** | **Done** | Docker containerization with Neon PostgreSQL |
 | Dark mode & responsive polish | Planned | Requires updated design tokens |
-| Docker / Compose packaging | Planned | Containerize API, Redis, worker, frontend |
 | CI/CD & frontend unit tests | Planned | Add Vitest + pipeline-wide quality gates |
 
 ## Contributing
