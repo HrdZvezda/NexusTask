@@ -8,9 +8,22 @@ import secrets
 # 從父目錄導入
 import sys
 import os
+'''
+__file__ = the path to the current file
+os.path.abspath = absolute path of the current file
+1st os.path.dirname = directory name 往上一層拿到 api/ 資料夾
+2nd os.path.dirname = directory name 再往上一層拿到 backend/ 資料夾
+sys.path = python 用來找模組的路徑清單
+insert(0, ...) = 把這個路徑插入到最前面
+
+auth.py in api/ folder and need to import inside .py file in backend/ folder
+python預設不會往父資料夾裡找模組
+所以使用sys.path.insert()將backend/資料夾加入python找模組的路徑清單
+'''
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import db, User, LoginAttempt, PasswordResetToken
 
+# 建立blueprint
 auth_bp = Blueprint('auth', __name__)
 logger = logging.getLogger(__name__)
 
@@ -18,13 +31,17 @@ logger = logging.getLogger(__name__)
 # 安全性輔助函數
 # ============================================
 
-def validate_password_strength(password: str) -> tuple:
+# type hint(沒有也可以執行) → 一看就知道回傳 tuple
+def validate_password_strength(password: str) -> tuple[bool, str]:
     """
     根據 config 驗證密碼強度
     
     Returns:
         tuple: (is_valid, error_message)
     """
+    # 防禦性寫法 Defensive Programming
+    # 取得 config 中的設定
+    # 預設值跟config中的值一樣, 就算config出錯, 還是可以正常執行
     min_length = current_app.config.get('PASSWORD_MIN_LENGTH', 8)
     require_upper = current_app.config.get('PASSWORD_REQUIRE_UPPERCASE', False)
     require_numbers = current_app.config.get('PASSWORD_REQUIRE_NUMBERS', False)
@@ -33,6 +50,8 @@ def validate_password_strength(password: str) -> tuple:
     if len(password) < min_length:
         return False, f'Password must be at least {min_length} characters'
     
+    # 未來若需要修改config中的設定, 只需要修改config即可, 不需要修改code
+    # 在未來有更改設定的話, 以下三段也會檢查(目前預設都是false)
     if require_upper and not any(c.isupper() for c in password):
         return False, 'Password must contain at least one uppercase letter'
     
@@ -44,68 +63,97 @@ def validate_password_strength(password: str) -> tuple:
     
     return True, ''
 
-def check_account_locked(email: str) -> tuple:
+def check_account_locked(email: str) -> tuple[bool, int]:
     """
     檢查帳號是否因登入失敗過多而被鎖定
     
     Returns:
         tuple: (is_locked, remaining_minutes)
     """
-    lockout_threshold = 5  # 5 次失敗後鎖定
-    lockout_duration = 15  # 鎖定 15 分鐘
-    
+    lockout_threshold = current_app.config.get('LOGIN_ATTEMPT_LOCKOUT_THRESHOLD', 5)
+    lockout_duration = current_app.config.get('LOGIN_ATTEMPT_LOCKOUT_DURATION_MINUTES', 15)
+   
+    # 用來檢查最近15min內失敗的紀錄(timedelta = 時間差值(長度))
+    # 現在時間 - 設定的時間 = cutoff_time
     cutoff_time = datetime.utcnow() - timedelta(minutes=lockout_duration)
     
+    # ORM
     failed_attempts = LoginAttempt.query.filter(
         LoginAttempt.email == email,
+        # is._()更好, null != false in db
         LoginAttempt.success.is_(False),
         LoginAttempt.timestamp > cutoff_time
     ).count()
     
+    # 檢查失敗次數是否超過門檻(被鎖定)
     if failed_attempts >= lockout_threshold:
-        # 找出最後一次失敗的時間，計算剩餘鎖定時間
+        # 找出最後一次失敗的時間
         last_attempt = LoginAttempt.query.filter(
             LoginAttempt.email == email,
             LoginAttempt.success.is_(False)
-        ).order_by(LoginAttempt.timestamp.desc()).first()
+        ).order_by(LoginAttempt.timestamp.desc()).first() # 按時間倒序排列, 取第一筆(最新的)
         
+        # 檢查確認查詢有結果
         if last_attempt:
+            # 計算最後失敗的時間 + lockout_duration = 解鎖時間
             unlock_time = last_attempt.timestamp + timedelta(minutes=lockout_duration)
+            # 計算剩餘鎖定時間, 轉成分鐘
             remaining = (unlock_time - datetime.utcnow()).total_seconds() / 60
+            # True 被鎖定, 取 0 和 remaining 中較大的那個值
             return True, max(0, int(remaining))
-    
+    # 沒被鎖定, 回傳剩餘時間0
     return False, 0
 
-def record_login_attempt(email: str, success: bool, failure_reason: str = None):
+def record_login_attempt(email: str, success: bool, failure_reason: str | None = None):
     """記錄登入嘗試"""
     try:
+        # 建立一筆登入紀錄
         attempt = LoginAttempt(
             email=email,
-            ip_address=request.remote_addr,
+            ip_address=request.remote_addr, # 取得「發送請求的 IP 地址」
             success=success,
             failure_reason=failure_reason
         )
+        # 將紀錄加入db
         db.session.add(attempt)
         db.session.commit()
     except Exception as e:
+        # 如果出錯, 用logger記錄錯誤, 並回滾db
+        # 不要把 exception 細節洩漏給前端
         logger.error(f"Failed to record login attempt: {str(e)}")
         db.session.rollback()
 
 
 
 # ============================================
-# Input Validation Schemas (用 marshmallow)
+# Input Validation Schemas (用 marshmallow - Python套件)
 # ============================================
 
+# 共用的設定, 不只屬於某個class, 所以放在class外
+VALID_DEPARTMENTS = [
+    'Engineering',
+    'Design',
+    'Product Management',
+    'Marketing',
+    'Sales',
+    'Human Resources',
+    'Finance',
+    'Operations',
+    'Other',
+    'General'
+]
+
+# 繼承Schema - 需要驗證輸入格式的地方才會需要繼承
 class RegisterSchema(Schema):
     """註冊輸入驗證"""
+    # fields.Email - 必須是eamil格式(要有＠)
     email = fields.Email(required=True, error_messages={
         'required': 'Email is required',
         'invalid': 'Invalid email format'
     })
     password = fields.Str(
         required=True,
-        validate=validate.Length(min=4, max=128, error='Password must be 4-128 characters'),
+        validate=validate.Length(min=8, max=128, error='Password must be 8-128 characters'),
         error_messages={'required': 'Password is required'}
     )
     username = fields.Str(
@@ -113,7 +161,10 @@ class RegisterSchema(Schema):
         validate=validate.Length(min=2, max=50, error='Username must be 2-50 characters'),
         error_messages={'required': 'Username is required'}
     )
-    department = fields.Str(validate=validate.Length(max=100))
+    department = fields.Str(
+        validate=validate.OneOf(VALID_DEPARTMENTS, error='Invalid department'),
+        error_messages={'required': 'Department is required'}
+    )
 
 class LoginSchema(Schema):
     """登入輸入驗證"""
@@ -121,35 +172,40 @@ class LoginSchema(Schema):
     password = fields.Str(required=True)
 
 # ============================================
-# Helper Functions
+# Helper Functions(小工具 - 被重複使用的功能)
 # ============================================
 
 def get_bcrypt():
     """從 Flask app extensions 取得 bcrypt 實例 (不用 global variable)"""
     try:
-        bcrypt = current_app.extensions.get('bcrypt')
+        # 避免循環import, 所以沒有引入bcrypt, 而是從app extensions取得
+        # .get() - 如果取不到key的值, 回傳None
+        bcrypt = current_app.extensions.get('bcrypt') # 取得bcrypt實例
+        
+        # 檢查bcrypt是否為None
         if bcrypt is None:
             # 如果還是找不到,嘗試直接從 app 取得
             from flask_bcrypt import Bcrypt
-            bcrypt = Bcrypt(current_app)
-            current_app.extensions['bcrypt'] = bcrypt
+            bcrypt = Bcrypt(current_app) # 建立bcrypt實例
+            current_app.extensions['bcrypt'] = bcrypt # 將bcrypt加入app extensions
         return bcrypt
+    
     except Exception as e:
+        # 不要把 exception 細節洩漏給前端
         logger.error(f"Failed to get bcrypt: {str(e)}")
         return None
 
-def validate_request_data(schema_class, data):
-    """
-    統一的輸入驗證函數
-    
-    Returns:
-        tuple: (is_valid, data_or_errors)
-    """
+def validate_request_data(schema_class, data:dict) -> tuple[bool, dict]:
+    """驗證輸入資料，回傳 (是否有效, 資料或錯誤訊息)"""
+
     schema = schema_class()
+    # Schema常用方法 - load(data), dump(obj), validate(data), loads(json_str), dumps(obj)
+    # load() - 驗證資料
     try:
         validated_data = schema.load(data)
         return True, validated_data
     except ValidationError as err:
+        # err.messages - 屬性名稱(取得時用的)
         return False, err.messages
 
 # ============================================
@@ -166,36 +222,37 @@ def register():
     2. 密碼強度驗證（根據 config 設定）
     3. Email 唯一性檢查
     """
-    data = request.get_json()
+    data = request.get_json() # 取得前端傳來的資料
     
     if not data:
         return jsonify({'error': 'Request body must be JSON'}), 400
     
-    # 驗證輸入
+    # 驗證輸入 - 跑一次函數, 回傳一個tuple[bool, dict]
     is_valid, result = validate_request_data(RegisterSchema, data)
     if not is_valid:
         return jsonify({'error': 'Validation failed', 'details': result}), 400
     
-    # 驗證密碼強度
+    # 驗證密碼強度 - 回傳一個tuple[bool, str]
     is_strong, error_msg = validate_password_strength(result['password'])
     if not is_strong:
         return jsonify({'error': error_msg}), 400
     
-    # 檢查 email 是否已存在
+    # 檢查 email 是否已存在 - ORM查詢db取得的第一筆
     if User.query.filter_by(email=result['email']).first():
         return jsonify({'error': 'Email already exists'}), 409
     
     # 加密密碼 (使用 current_app 而非 global variable)
-    bcrypt = get_bcrypt()
+    bcrypt = get_bcrypt() # 取得bcrypt實例
     if not bcrypt:
         logger.error("Bcrypt extension not loaded correctly.")
         return jsonify({'error': 'Server configuration error (Bcrypt missing)'}), 500
 
+    # 把使用者輸入的明文密碼加密再轉成utf-8字串
     hashed_password = bcrypt.generate_password_hash(result['password']).decode('utf-8')
 
     # 判斷是否為第一個使用者（自動成為管理員）
     # 這確保系統至少有一個管理員
-    is_first_user = User.query.count() == 0
+    # is_first_user = User.query.count() == 0
     
     # 建立使用者
     user = User(
@@ -203,7 +260,8 @@ def register():
         username=result['username'],
         password_hash=hashed_password,
         department=result.get('department'),
-        role='admin' if is_first_user else 'member'  # 第一個用戶自動成為管理員
+        role='member' # 所有人都是一般成員
+        # role='admin' if is_first_user else 'member'  # 第一個用戶自動成為管理員
     )
     
     try:
@@ -261,31 +319,32 @@ def login():
             'error': f'Account is temporarily locked. Please try again in {remaining_minutes} minutes.',
             'locked': True,
             'remaining_minutes': remaining_minutes
-        }), 429
+        }), 429 # Too Many Requests
     
     # 查詢使用者
     user = User.query.filter_by(email=email).first()
     
-    # 驗證密碼
+    # 驗證密碼  
+    # 安全考量, 所以不區分「帳號不存在」(會知道email沒有被註冊過)或是「密碼錯誤」(知道這個mail註冊過)
     bcrypt = get_bcrypt()
     if not user or not bcrypt.check_password_hash(user.password_hash, result['password']):
         # 記錄失敗的登入嘗試
         record_login_attempt(email, success=False, failure_reason='invalid_credentials')
-        logger.warning(f"Failed login attempt for email: {email}")
-        return jsonify({'error': 'Invalid credentials'}), 401
-    
+        logger.warning(f"Failed login attempt for email: { email }")
+        return jsonify({ "error" : "Invalid credentials" }), 401 # Unauthorized
+
     # 檢查帳號是否被停用
     if not user.is_active:
-        record_login_attempt(email, success=False, failure_reason='account_disabled')
-        logger.warning(f"Inactive user login attempt: {user.email}")
-        return jsonify({'error': 'Account is disabled'}), 403
+        record_login_attempt(email, success=False, failure_reason='account_disable')
+        logger.warniing(f"Inactive user login attempt: { user.email }")
+        return jsonify({ "error" : "Account is disabled" }), 403 # Forbidden
     
     # 記錄成功的登入
     record_login_attempt(email, success=True)
     
     # 建立 JWT tokens (包含 access token 和 refresh token)
-    access_token = create_access_token(identity=str(user.id))
-    refresh_token = create_refresh_token(identity=str(user.id))
+    access_token = create_access_token(identity=str(user.id)) # 存取API用
+    refresh_token = create_refresh_token(identity=str(user.id)) # 更新access token用
     
     # 更新最後登入時間
     try:
@@ -295,10 +354,11 @@ def login():
         # 這個錯誤不影響登入,只記錄就好
         logger.error(f"Failed to update last_login for {user.email}: {str(e)}")
     
+    # 紀錄登入成功
     logger.info(f"User logged in: {user.email}")
     
     # 判斷是否為管理員（使用 User 模型的 is_admin 方法）
-    is_admin = user.is_admin()
+    # is_admin = user.is_admin()
     
     return jsonify({
         'message': 'Login successful',
@@ -309,18 +369,30 @@ def login():
             'email': user.email,
             'username': user.username,
             'name': user.username,
-            'avatar_url': user.avatar_url or f"https://ui-avatars.com/api/?name={user.username}&background=random",
+            'avatar_url': user.avatar_url or f"ht"tps://ui-avatars.com/api/?name={user.username}&background=random",
             'department': user.department,
-            'role': 'admin' if is_admin else 'member'
+            # 'role': 'admin' if is_admin else 'member'
+            'role': 'member'
         }
     }), 200
 
 # ============================================
 # Token 刷新 API (新增)
+
+# 流程
+# 1. 前端用 access token 呼叫其他 API
+#    例如：GET /projects
+# 2. 後端 @jwt_required() 檢查
+#    → 「Access token 過期了！」
+#    → 回傳 401 錯誤
+# 3. 前端收到 401
+#    → 「喔！access token 過期了」
+#    → 自動呼叫 /refresh 換新的
 # ============================================
 
+# 裝飾器需不需要寫參數, 取決於裝飾器有沒有提供你要的功能(看官網文件orGoogle), 沒有的話就自己寫
 @auth_bp.route('/refresh', methods=['POST'])
-@jwt_required(refresh=True)
+@jwt_required(refresh=True) # 檢查refresh token是否有效(過期)
 def refresh():
     """
     刷新 access token
@@ -328,13 +400,14 @@ def refresh():
     這是新增的功能,讓前端可以用 refresh token 換新的 access token
     避免使用者頻繁重新登入
     """
-    user_id = get_jwt_identity()
-    user = User.query.get(user_id)
+    user_id = get_jwt_identity() # 需要搭配@jwt_required使用
+    user = User.query.get(user_id) # 用user_id查詢user
     
     if not user or not user.is_active:
         return jsonify({'error': 'Invalid or inactive user'}), 401
     
-    access_token = create_access_token(identity=str(user.id))
+    # 用user_id生成新的access token
+    access_token = create_access_token(identity=str(user.id)) 
     
     return jsonify({
         'access_token': access_token
@@ -354,26 +427,32 @@ def logout():
     """
     from core import revoke_token
 
-    jwt_data = get_jwt()
+    jwt_data = get_jwt() # 取得JWT token的完整資料
     jti = jwt_data['jti']  # JWT ID
 
     # 計算 token 剩餘有效時間
+    # 如果'exp'不存在, ['exp']會報錯,但.get('exp')會回傳None
     exp_timestamp = jwt_data.get('exp')
+
+    # 判斷'有沒有值'得時候可以這樣寫
+    # None, 0, False, 空字串'', 空集合{}, 空清單[], 空字典{}, 空集合set()
+    # if x => if bool(x) == True
     if exp_timestamp:
+        # exp_timestamp - datetime.utcnow().timestamp() => 剩餘有效時間
         expires_delta = timedelta(seconds=max(0, exp_timestamp - datetime.utcnow().timestamp()))
     else:
         expires_delta = timedelta(hours=24)  # 預設 24 小時
 
-    # 將 token 加入黑名單
+    # 將 token 加入黑名單() - token無法刪除, 所以才用加黑名單的方式記錄
     revoke_token(jti, expires_delta)
 
-    user_id = get_jwt_identity()
-    logger.info(f"User logged out: {user_id}, token revoked: {jti[:8]}...")
+    # [:8] => 只顯示前8位, 安全考量不顯示完整ID, 足夠辨識
+    logger.info(f"User logged out: {get_jwt_identity()}, token revoked: {jti[:8]}...")
 
     return jsonify({'message': 'Logout successful'}), 200
 
 # ============================================
-# 取得當前使用者資訊
+# 取得當前使用者資訊 (last)
 # ============================================
 
 @auth_bp.route('/me', methods=['GET'])
@@ -405,7 +484,8 @@ def get_me():
         'bio': user.bio,
         'department': user.department,
         'position': user.position,
-        'role': 'admin' if is_admin else 'member',
+        # 'role': 'admin' if is_admin else 'member',
+        'role': 'member',
         'is_active': user.is_active,
         'last_login': user.last_login.isoformat() if user.last_login else None,
         'created_at': user.created_at.isoformat()
