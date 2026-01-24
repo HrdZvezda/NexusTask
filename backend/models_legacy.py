@@ -134,7 +134,7 @@ class User(db.Model):
     is_active = db.Column(db.Boolean, default=True)
     
     # 上次登入時間
-    # last_login = db.Column(db.DateTime)
+    last_login = db.Column(db.DateTime)
     
     # 建立時間（自動設定為現在時間）
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
