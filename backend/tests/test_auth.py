@@ -35,47 +35,48 @@ class TestRegister:
         assert 'user' in data
         assert data['user']['email'] == 'new@example.com'
     
-    def test_register_first_user_is_admin(self, client):
-        """測試第一個註冊的使用者自動成為管理員"""
-        # 註冊第一個使用者
-        response = client.post('/auth/register', json={
-            'email': 'admin@example.com',
-            'username': 'Admin',
-            'password': 'password123'
-        })
-        assert response.status_code == 201
+    # auth.py把admin移除都改成member
+    # def test_register_first_user_is_admin(self, client):
+    #     """測試第一個註冊的使用者自動成為管理員"""
+    #     # 註冊第一個使用者
+    #     response = client.post('/auth/register', json={
+    #         'email': 'admin@example.com',
+    #         'username': 'Admin',
+    #         'password': 'password123'
+    #     })
+    #     assert response.status_code == 201
         
-        # 登入並檢查角色
-        response = client.post('/auth/login', json={
-            'email': 'admin@example.com',
-            'password': 'password123'
-        })
-        data = response.get_json()
-        assert data['user']['role'] == 'admin'
+    #     # 登入並檢查角色
+    #     response = client.post('/auth/login', json={
+    #         'email': 'admin@example.com',
+    #         'password': 'password123'
+    #     })
+    #     data = response.get_json()
+    #     assert data['user']['role'] == 'admin'
     
-    def test_register_second_user_is_member(self, client):
-        """測試第二個註冊的使用者是一般成員"""
-        # 註冊第一個使用者（管理員）
-        client.post('/auth/register', json={
-            'email': 'admin@example.com',
-            'username': 'Admin',
-            'password': 'password123'
-        })
+    # def test_register_second_user_is_member(self, client):
+    #     """測試第二個註冊的使用者是一般成員"""
+    #     # 註冊第一個使用者（管理員）
+    #     client.post('/auth/register', json={
+    #         'email': 'admin@example.com',
+    #         'username': 'Admin',
+    #         'password': 'password123'
+    #     })
         
-        # 註冊第二個使用者
-        client.post('/auth/register', json={
-            'email': 'member@example.com',
-            'username': 'Member',
-            'password': 'password123'
-        })
+    #     # 註冊第二個使用者
+    #     client.post('/auth/register', json={
+    #         'email': 'member@example.com',
+    #         'username': 'Member',
+    #         'password': 'password123'
+    #     })
         
-        # 登入第二個使用者並檢查角色
-        response = client.post('/auth/login', json={
-            'email': 'member@example.com',
-            'password': 'password123'
-        })
-        data = response.get_json()
-        assert data['user']['role'] == 'member'
+    #     # 登入第二個使用者並檢查角色
+    #     response = client.post('/auth/login', json={
+    #         'email': 'member@example.com',
+    #         'password': 'password123'
+    #     })
+    #     data = response.get_json()
+    #     assert data['user']['role'] == 'member'
     
     def test_register_duplicate_email(self, client):
         """測試重複 email 註冊失敗"""
