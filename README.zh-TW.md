@@ -4,6 +4,15 @@
 
 NexusTeam 是一個全端協作套件，專注於後端韌性、安全性和架構清晰度。Flask API 透過服務層、快取、背景任務、即時事件和結構化可觀測性提供模組化藍圖，React 前端則透過 React Query 和 Socket.IO 使用 API。
 
+## 🚀 線上展示
+
+| 服務 | URL |
+|------|-----|
+| **前端** | [https://nexus-task-xi.vercel.app](https://nexus-task-xi.vercel.app) |
+| **後端 API** | [https://nexustask-backend-160761384347.asia-east1.run.app](https://nexustask-backend-160761384347.asia-east1.run.app) |
+
+> 展示帳號：`howard@test.com` / `password`
+
 ---
 
 ## 目錄
@@ -123,24 +132,33 @@ nexusteam/
 ├── backend/
 │   ├── api/                        # 藍圖 (auth, projects, tasks, notifications, members, uploads, health)
 │   ├── core/                       # Cache, Celery tasks, middleware, socket events, Swagger config
+│   │   └── token_blacklist.py      # JWT Token 撤銷系統 (Redis/記憶體)
 │   ├── services/                   # 服務層 (BaseService, auth/project/task/notification services)
-│   ├── utils/response.py           # ApiResponse factory, ErrorCode enum, ResponseBuilder
+│   │   └── permissions.py          # 集中式權限檢查（避免循環引用）
+│   ├── utils/                      # 工具函數
+│   │   ├── response.py             # ApiResponse factory, ErrorCode enum, ResponseBuilder
+│   │   └── validators.py           # 共用驗證（Marshmallow、密碼、日期、Email、分頁）
 │   ├── models.py                   # models_legacy 的橋接（向後相容）
-│   ├── models_legacy.py            # SQLAlchemy 模型 + 索引 (LoginAttempt, PasswordResetToken, etc.)
+│   ├── models_legacy.py            # SQLAlchemy 模型 + 索引
 │   ├── config.py                   # 環境驅動的設定
-│   ├── app.py                      # Flask 入口點、中介軟體連接、藍圖、健康路由
+│   ├── app.py                      # Flask 入口點、中介軟體連接、藍圖
+│   ├── Dockerfile                  # Docker 容器建置配置
 │   ├── requirements.txt            # 後端依賴
 │   └── tests/                      # pytest 測試套件
 ├── frontend/
-│   ├── App.tsx                     # 認證感知路由器 + QueryProvider
+│   ├── App.tsx                     # 認證感知路由器 + QueryProvider + NotificationProvider
 │   ├── hooks/useApi.ts             # React Query hooks + 樂觀更新
 │   ├── hooks/useSocket.ts          # Socket.IO 輔助 + 房間輔助
 │   ├── providers/QueryProvider.tsx # React Query 客戶端啟動
 │   ├── context/AuthContext.tsx     # 認證會話狀態
-│   └── components/pages/...        # UI 模組
+│   ├── context/NotificationContext.tsx # 共享通知狀態（Dashboard 與 Notifications 同步）
+│   └── pages/...                   # UI 頁面
 ├── .start/dev                      # 啟動兩個應用程式的便利腳本
+├── DEPLOYMENT.md                   # 部署指南（GCP Cloud Run + Vercel + Neon）
+├── CODE_REVIEW.md                  # 程式碼審查報告
 └── README.md
 ```
+
 
 ## 後端能力
 
@@ -384,6 +402,18 @@ gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:8888 app:app
 - 監控 `/health/*` 端點和速率限制標頭；對緩慢的 DB/Redis 檢查或 5xx 激增發出警報。
 - 在您的代理/負載平衡器上終止 TLS，並對 HTTPS 流量保持 HSTS 啟用。
 
+## 部署
+
+本專案使用**免費方案**部署：
+
+| 服務 | 平台 | 費用 |
+|------|------|------|
+| 前端 | Vercel | 免費 |
+| 後端 | GCP Cloud Run | 免費額度 |
+| 資料庫 | Neon PostgreSQL | 免費 512MB |
+
+詳細部署說明請參考 [DEPLOYMENT.md](./DEPLOYMENT.md)。
+
 ## 路線圖
 
 | 領域 | 狀態 | 說明 |
@@ -392,8 +422,8 @@ gunicorn --worker-class eventlet -w 1 --bind 0.0.0.0:8888 app:app
 | 密碼政策 + 帳號鎖定 | 完成 | 設定驅動 + LoginAttempt 審計 |
 | 自動清理與專案快照 | 完成 | Celery beat 排程（每日作業）|
 | 電子郵件/通知摘要 | 進行中 | 提供 SMTP 憑證 + 擴展 Celery handlers |
+| **GCP Cloud Run 部署** | **完成** | Docker 容器化 + Neon PostgreSQL |
 | 深色模式與響應式優化 | 計劃中 | 需要更新的設計 tokens |
-| Docker / Compose 打包 | 計劃中 | 容器化 API、Redis、worker、前端 |
 | CI/CD 與前端單元測試 | 計劃中 | 新增 Vitest + 管道範圍的品質關卡 |
 
 ## 貢獻
